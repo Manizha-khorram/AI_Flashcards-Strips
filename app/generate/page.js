@@ -18,15 +18,73 @@ import {
   DialogActions,
   DialogTitle,
 } from "@mui/material";
+
 import { useRouter } from "next/navigation";
-import { db } from "../../FirebaseConfig";
-import { collection, getDoc, writeBatch, doc } from "firebase/firestore";
+import { db } from "../api/generate/firebase";
+import { collection, getDoc, writeBatch, doc, query, getDocs } from "firebase/firestore";
+
+const fetchFlashcards = async (setName) => {
+  try {
+    const userDocRef = doc(collection(db, "users"), "user_id_here"); // Replace with actual user ID
+    const flashcardsCollection = collection(userDocRef, "flashcardSets", setName, "flashcards");
+    const q = query(flashcardsCollection);
+    const querySnapshot = await getDocs(q);
+    
+    const flashcards = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return flashcards;
+  } catch (error) {
+    console.error("Error fetching flashcards:", error);
+    alert("An error occurred while fetching flashcards. Please try again.");
+    return [];
+  }
+};
+
+const saveFlashcards = async (name, flashcards, handleClose, setName) => {
+  if (!name.trim()) {
+    alert("Please enter a name for your flashcard set.");
+    return;
+  }
+
+  try {
+    const userDocRef = doc(collection(db, "users"), "user_id_here"); // Replace with actual user ID
+    const userDocSnap = await getDoc(userDocRef);
+
+    const batch = writeBatch(db);
+
+    if (userDocSnap.exists()) {
+      const userData = userDocSnap.data();
+      const updatedSets = [...(userData.flashcardSets || []), { name }];
+      batch.update(userDocRef, { flashcardSets: updatedSets });
+    } else {
+      batch.set(userDocRef, { flashcardSets: [{ name }] });
+    }
+
+    const setDocRef = doc(collection(userDocRef, "flashcardSets"), name);
+    flashcards.forEach((flashcard, index) => {
+      const flashcardRef = doc(collection(setDocRef, "flashcards"), `${index}`);
+      batch.set(flashcardRef, flashcard);
+    });
+
+    await batch.commit();
+
+    alert("Flashcards saved successfully!");
+    handleClose();
+    setName("");
+  } catch (error) {
+    console.error("Error saving flashcards:", error);
+    alert("An error occurred while saving flashcards. Please try again.");
+  }
+};
 
 export default function Generate() {
   const [text, setText] = useState("");
   const [flashcards, setFlashcards] = useState([]);
   const [flipped, setFlipped] = useState({});
-  const [name, setName] = useState(""); // Changed to name
+  const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,7 +98,7 @@ export default function Generate() {
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
-        body: JSON.stringify({ text }), // Send text as JSON
+        body: JSON.stringify({ text }),
         headers: { "Content-Type": "application/json" },
       });
 
@@ -49,7 +107,7 @@ export default function Generate() {
       }
 
       const data = await response.json();
-      setFlashcards(data.flashcards); // Ensure data has flashcards
+      setFlashcards(data.flashcards);
     } catch (error) {
       console.error("Error generating flashcards:", error);
       alert("An error occurred while generating flashcards. Please try again.");
@@ -73,39 +131,6 @@ export default function Generate() {
 
   const handleOpenDialog = () => setDialogOpen(true);
   const handleCloseDialog = () => setDialogOpen(false);
-  const saveFlashcards = async () => {
-    if (!name.trim()) {
-      alert("Please enter a name for your flashcard set.");
-      return;
-    }
-
-    try {
-      const userDocRef = doc(collection(db, "users"), "user_id_here"); // Replace with actual user ID
-      const userDocSnap = await getDoc(userDocRef);
-
-      const batch = writeBatch(db);
-
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        const updatedSets = [...(userData.flashcardSets || []), { name }];
-        batch.update(userDocRef, { flashcardSets: updatedSets });
-      } else {
-        batch.set(userDocRef, { flashcardSets: [{ name }] });
-      }
-
-      const setDocRef = doc(collection(userDocRef, "flashcardSets"), name);
-      batch.set(setDocRef, { flashcards });
-
-      await batch.commit();
-
-      alert("Flashcards saved successfully!");
-      handleClose();
-      setName("");
-    } catch (error) {
-      console.error("Error saving flashcards:", error);
-      alert("An error occurred while saving flashcards. Please try again.");
-    }
-  };
 
   return (
     <Container maxWidth="md">
@@ -272,7 +297,7 @@ export default function Generate() {
             <Button
               variant="contained"
               color="secondary"
-              onClick={handleOpen}
+              onClick={handleOpenDialog}
               fullWidth
               sx={{ mt: 2 }}
             >
@@ -289,22 +314,25 @@ export default function Generate() {
             Please enter a name for your flashcard set.
           </DialogContentText>
           <TextField
-            autoFocus
-            margin="dense"
-            label="Set Name"
-            type="text"
-            fullWidth
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={saveFlashcards} color="primary">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
-  );
+          autoFocus
+          margin="dense"
+          label="Set Name"
+          type="text"
+          fullWidth
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleCloseDialog}>Cancel</Button>
+        <Button
+          onClick={() => saveFlashcards(name, flashcards, handleCloseDialog, setName)}
+          color="primary"
+        >
+          Save
+        </Button>
+      </DialogActions>
+    </Dialog>
+  </Container>
+);
 }
