@@ -26,7 +26,7 @@ export default function Generate() {
   const [text, setText] = useState("");
   const [flashcards, setFlashcards] = useState([]);
   const [flipped, setFlipped] = useState({});
-  const [name, setName] = useState(""); // Changed to name
+  const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,7 +40,7 @@ export default function Generate() {
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
-        body: JSON.stringify({ text }), // Send text as JSON
+        body: JSON.stringify({ text }),
         headers: { "Content-Type": "application/json" },
       });
 
@@ -49,7 +49,7 @@ export default function Generate() {
       }
 
       const data = await response.json();
-      setFlashcards(data.flashcards); // Ensure data has flashcards
+      setFlashcards(data.flashcards);
     } catch (error) {
       console.error("Error generating flashcards:", error);
       alert("An error occurred while generating flashcards. Please try again.");
@@ -119,46 +119,51 @@ export default function Generate() {
           alignItems: "center",
         }}
       >
-        <Typography variant="h4" component="h1" gutterBottom>
-          Generate Flashcards
-        </Typography>
-        <Paper sx={{ width: "100%", maxWidth: "md", p: 2 }}>
+        <Paper
+          sx={{ width: "100%", maxWidth: "md", p: 2, bgcolor: "transparent" }}
+        >
           <TextField
+            id="standard-textarea"
+            placeholder="Write here!"
+            variant="standard"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            label="Enter text"
+            label="What is in your mind!"
             fullWidth
             multiline
             rows={4}
-            variant="outlined"
             sx={{
               mb: 2,
               borderRadius: 2,
-              bgcolor: "#f5f5f5",
+              borderColor: "white",
+              bgcolor: "transparent",
+              "& .MuiInputBase-input": {
+                color: "white",
+              },
               "& .MuiOutlinedInput-root": {
                 borderRadius: 2,
-                bgcolor: "#fff",
+                bgcolor: "transparent",
                 "& fieldset": {
-                  borderColor: "#1976d2",
+                  borderColor: "#90caf9 !important",
                 },
                 "&:hover fieldset": {
-                  borderColor: "#1976d2",
+                  borderColor: "#64b5f6 !important",
                 },
                 "&.Mui-focused fieldset": {
-                  borderColor: "#1976d2",
+                  borderColor: "#42a5f5 !important",
                 },
               },
               "& .MuiInputLabel-root": {
-                color: "#333",
+                color: "#80808094",
                 "&.Mui-focused": {
-                  color: "#1976d2",
+                  color: "#80808094",
                 },
               },
             }}
           />
         </Paper>
         <Button
-          variant="contained"
+          variant="outlined"
           color="primary"
           onClick={handleSubmit}
           fullWidth
@@ -175,7 +180,13 @@ export default function Generate() {
           <Grid container spacing={2}>
             {flashcards.map((flashcard, index) => (
               <Grid item xs={12} sm={6} md={4} key={index}>
-                <Card>
+                <Card
+                  sx={{
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+                    bgcolor: "#060a1a",
+                    color: "white",
+                  }}
+                >
                   <CardActionArea onClick={() => handleCardClick(index)}>
                     <CardContent>
                       <Box
@@ -184,7 +195,7 @@ export default function Generate() {
                           position: "relative",
                           width: "100%",
                           height: "200px",
-                          boxShadow: "0 4px 8px 0 rgb(0, 0, 0,0.2)",
+                          boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
                         }}
                       >
                         <Box
@@ -210,8 +221,7 @@ export default function Generate() {
                               alignItems: "center",
                               padding: 2,
                               boxSizing: "border-box",
-                              backgroundColor: "#fff",
-                              border: "1px solid #ddd",
+                              border: "1px solid #014258", // Light blue border
                               textOverflow: "ellipsis",
                               whiteSpace: "normal",
                               overflowY: "auto",
@@ -242,8 +252,7 @@ export default function Generate() {
                               alignItems: "center",
                               padding: 2,
                               boxSizing: "border-box",
-                              backgroundColor: "#fff",
-                              border: "1px solid #ddd",
+                              border: "1px solid #014258", // Light blue border
                               transform: "rotateY(180deg)",
                               whiteSpace: "normal",
                               overflowY: "auto",
@@ -269,17 +278,7 @@ export default function Generate() {
               </Grid>
             ))}
           </Grid>
-          <Box sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={handleOpen}
-              fullWidth
-              sx={{ mt: 2 }}
-            >
-              Save Flashcards
-            </Button>
-          </Box>
+          <Box sx={{ mt: 4, display: "flex", justifyContent: "center" }}></Box>
         </Box>
       )}
 
@@ -301,9 +300,7 @@ export default function Generate() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={saveFlashcards} color="primary">
-            Save
-          </Button>
+          <Button onClick={saveFlashcards}>Save</Button>
         </DialogActions>
       </Dialog>
     </Container>
