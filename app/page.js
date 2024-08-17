@@ -18,9 +18,9 @@ export default function BackgroundBeamsDemo() {
           Your journey to knowledge begins here.
         </p>
         <div className={styles.animatedText}>
-          <span>Build</span>
-          <span>awesome</span>
-          <span>apps</span>
+          <span>Boost</span>
+          <span>your</span>
+          <span>knowledge</span>
           <span>with</span>
           <span className={styles.highlightedText}>FlashMind.</span>
         </div>
