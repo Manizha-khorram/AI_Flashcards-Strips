@@ -2,7 +2,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
-import Generate from "./Home"; // Adjust the import as needed
+import Generate from "./Home";
 
 export const LampContainer = ({
   children,

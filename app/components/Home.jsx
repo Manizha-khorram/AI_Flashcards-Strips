@@ -19,7 +19,6 @@ import {
   DialogTitle,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
-import { db } from "../../FirebaseConfig";
 import { collection, getDoc, writeBatch, doc } from "firebase/firestore";
 
 export default function Generate() {

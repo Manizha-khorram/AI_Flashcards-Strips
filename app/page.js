@@ -2,17 +2,27 @@
 
 import React from "react";
 import BackgroundBeams from "./components/BackgroundBeams";
-import styles from "./page.module.css"; // Import CSS Module
+import styles from "./page.module.css";
+import { useRouter } from "next/navigation";
 
 export default function BackgroundBeamsDemo() {
+  const router = useRouter();
+
   return (
     <div className={styles.relativeContainer}>
-      {/* BackgroundBeams should be behind all content */}
       <div className={styles.backgroundBeams}>
         <BackgroundBeams />
       </div>
+      {/* Subscription Button */}
+      <div className={styles.subscriptionButtonContainer}>
+        <button
+          className={styles.subscriptionButton}
+          onClick={() => router.push("/subscription")}
+        >
+          Subscribe
+        </button>
+      </div>
 
-      {/* Content should be on top */}
       <div className={styles.content}>
         <p className={styles.subtitle}>
           Your journey to knowledge begins here.
