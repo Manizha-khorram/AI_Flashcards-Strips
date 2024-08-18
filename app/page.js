@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import BackgroundBeams from "./components/BackgroundBeams";
 import styles from "./page.module.css";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,16 @@ import Link from 'next/link';
 
 export default function BackgroundBeamsDemo() {
   const router = useRouter();
+
+  useEffect(() => {
+    // Check if the "stack-refresh-..." cookie exists
+    const cookieExists = document.cookie.split("; ").some(row => row.startsWith("stack-refresh-"));
+
+    if (cookieExists) {
+      // If the cookie exists, redirect to the /home page
+      router.push("/home");
+    }
+  }, [router]);
 
   return (
     <div className={styles.relativeContainer}>

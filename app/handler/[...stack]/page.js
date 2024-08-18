@@ -1,9 +1,8 @@
 import { StackHandler } from "@stackframe/stack";
 import { stackServerApp } from "../../../stack";
-import {Card, CardHeader, CardBody, CardFooter} from "@nextui-org/card";
+import {Card, CardBody} from "@nextui-org/card";
 import styles from "../../page.module.css";
 import BackgroundBeams from "../../components/BackgroundBeams";
-
 
 export default function Handler(props) {
   return(

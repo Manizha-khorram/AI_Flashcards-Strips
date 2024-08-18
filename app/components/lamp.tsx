@@ -1,8 +1,10 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
 import Generate from "./Home";
+import styles from "../page.module.css";
 
 export const LampContainer = ({
   children,
@@ -11,6 +13,38 @@ export const LampContainer = ({
   children: React.ReactNode;
   className?: string;
 }) => {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Find the cookie with the prefix "stack-refresh-"
+    const cookieName = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("stack-refresh-"));
+
+    if (!cookieName) {
+      // If the cookie doesn't exist, redirect to the home page
+      router.push("/");
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    // Find the cookie with the prefix "stack-refresh-"
+    const cookieName = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("stack-refresh-"));
+
+    if (cookieName) {
+      // Extract the cookie name (before the '=' sign)
+      const cookieKey = cookieName.split("=")[0];
+
+      // Delete the cookie by setting its expiration to a past date
+      document.cookie = `${cookieKey}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+
+      // Redirect to the homepage after logging out
+      router.push("/");
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -96,6 +130,12 @@ export const LampContainer = ({
           Create Flashcards
         </motion.h1>
         <Generate />
+        <button
+          className={styles.subscriptionButton}
+          onClick={handleLogout}
+        >
+          Logout
+        </button>
       </div>
     </div>
   );

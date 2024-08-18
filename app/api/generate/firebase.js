@@ -13,12 +13,3 @@ const FirebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
-
-// Initialize Firebase
-const app = initializeApp(FirebaseConfig);
-
-// Initialize Firestore and Auth
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-export { db, auth };
