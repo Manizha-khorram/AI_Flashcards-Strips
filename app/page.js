@@ -1,12 +1,23 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import BackgroundBeams from "./components/BackgroundBeams";
 import styles from "./page.module.css";
 import { useRouter } from "next/navigation";
+import Link from 'next/link';
 
 export default function BackgroundBeamsDemo() {
   const router = useRouter();
+
+  useEffect(() => {
+    // Check if the "stack-refresh-..." cookie exists
+    const cookieExists = document.cookie.split("; ").some(row => row.startsWith("stack-refresh-"));
+
+    if (cookieExists) {
+      // If the cookie exists, redirect to the /home page
+      router.push("/home");
+    }
+  }, [router]);
 
   return (
     <div className={styles.relativeContainer}>
@@ -34,9 +45,17 @@ export default function BackgroundBeamsDemo() {
           <span>with</span>
           <span className={styles.highlightedText}>FlashMind.</span>
         </div>
-        <div className={styles.buttonContainer}>
-          <button className={styles.primaryButton}>Signin</button>
-          <button className={styles.secondaryButton}>Signup</button>
+        <div className={styles.authButtons}>
+          <button className={styles.primaryButton}>
+            <Link href="/handler/sign-in">
+              Sign In
+            </Link>
+          </button>
+          <button className={styles.secondaryButton}>
+            <Link href="/handler/sign-up">
+              Sign Up
+            </Link>
+          </button>
         </div>
       </div>
     </div>
