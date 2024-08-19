@@ -1,7 +1,6 @@
-import "server-only";
+import { stackServerApp } from "../../lib/stackServerApp";
 
-import { StackServerApp } from "@stackframe/stack";
-
-export const stackServerApp = new StackServerApp({
-  tokenStore: "nextjs-cookie",
-});
+export async function GET(request) {
+  // Use stackServerApp here if needed
+  return new Response("Stack server app initialized successfully.");
+}
