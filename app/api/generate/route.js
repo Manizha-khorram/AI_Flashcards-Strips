@@ -9,10 +9,9 @@ const model = genAI.getGenerativeModel({
 });
 
 const systemPrompt = `
-You are a flashcard creator.
 
-Your task is to generate flashcards based on the text input provided by the user. Each flashcard should contain a question on one side and an answer on the other. The flashcards should be clear, concise, and focus on key concepts or terms within the input text. Here's how you should process the input:
-
+You are a flashcard creator. Create 10 flashcards based on the provided text.
+Each flashcard should have a question and an answer.
 1. Identify key concepts, terms, or important sentences from the input text.
 2. Convert these into question-and-answer pairs.
 3. Ensure that each flashcard focuses on a single concept or term for clarity.
@@ -27,6 +26,47 @@ flashcards = [{
       "back": str
 }]
 `;
+
+const linksPrompt = `
+You are a search assistant.
+
+Your task is to provide relevant articles, links, or resources related to the following topic. Please generate a list of recommended resources that users can visit to learn more about the topic.
+
+Here's how you should process the input:
+
+1. Identify the main topic or key concepts from the provided text.
+2. Suggest relevant articles, websites, or other resources that are credible and informative.
+3. Provide a short description or title for each suggested resource.
+4. Return a list of 5 suggestions in the following format:
+
+links = [{
+  "title": str,
+  "url": str,
+  "description": str
+}]
+`;
+
+async function generateLinks(topic) {
+  const prompt = `${linksPrompt}\n${topic}`;
+  const result = await model.generateContent(prompt);
+  const response = await result.response.text();
+
+  let links;
+  try {
+    links = JSON.parse(response);
+  } catch (jsonError) {
+    console.error("Error parsing JSON response:", jsonError);
+    throw new Error("Error parsing response from API");
+  }
+
+  if (!Array.isArray(links)) {
+    console.error("Unexpected response format:", links);
+    throw new Error("Unexpected response format from API");
+  }
+
+  return links;
+}
+
 export async function POST(req) {
   try {
     const { text } = await req.json();
@@ -60,7 +100,18 @@ export async function POST(req) {
       });
     }
 
-    return NextResponse.json({ flashcards });
+    // Fetch related articles/links
+    let links;
+    try {
+      links = await generateLinks(text);
+    } catch (error) {
+      console.error("Error fetching links:", error);
+      return new NextResponse("Error fetching related articles", {
+        status: 500,
+      });
+    }
+
+    return NextResponse.json({ flashcards, links });
   } catch (error) {
     console.error("Error generating flashcards:", error);
     return new NextResponse("Internal Server Error", { status: 500 });

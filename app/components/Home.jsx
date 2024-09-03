@@ -17,86 +17,54 @@ import {
   DialogContentText,
   DialogActions,
   DialogTitle,
+  Link,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
-import { db } from "../api/generate/firebase"; // Update the path as necessary
-import {
-  collection,
-  getDoc,
-  writeBatch,
-  doc,
-  query,
-  getDocs,
-} from "firebase/firestore";
 
-const fetchFlashcards = async (setName) => {
+const fetchFlashcards = async (text) => {
   try {
-    const userDocRef = doc(collection(db, "users"), "user_id_here"); // Replace with actual user ID
-    const flashcardsCollection = collection(
-      userDocRef,
-      "flashcardSets",
-      setName,
-      "flashcards"
-    );
-    const q = query(flashcardsCollection);
-    const querySnapshot = await getDocs(q);
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+      headers: { "Content-Type": "application/json" },
+    });
 
-    const flashcards = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    if (!response.ok) {
+      throw new Error("Failed to generate flashcards");
+    }
 
-    return flashcards;
+    const data = await response.json();
+    return data.flashcards;
   } catch (error) {
-    console.error("Error fetching flashcards:", error);
-    alert("An error occurred while fetching flashcards. Please try again.");
+    console.error("Error generating flashcards:", error);
+    alert("An error occurred while generating flashcards. Please try again.");
     return [];
   }
 };
 
-const saveFlashcards = async (name, flashcards, handleClose, setName) => {
-  if (!name.trim()) {
-    alert("Please enter a name for your flashcard set.");
-    return;
-  }
-
+const fetchYouTubeLinks = async (query) => {
   try {
-    const userDocRef = doc(collection(db, "users"), "user_id_here"); // Replace with actual user ID
-    const userDocSnap = await getDoc(userDocRef);
-
-    const batch = writeBatch(db);
-
-    if (userDocSnap.exists()) {
-      const userData = userDocSnap.data();
-      const updatedSets = [...(userData.flashcardSets || []), { name }];
-      batch.update(userDocRef, { flashcardSets: updatedSets });
-    } else {
-      batch.set(userDocRef, { flashcardSets: [{ name }] });
+    const response = await fetch(`/api/youtube?query=${encodeURIComponent(query)}`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch YouTube links");
     }
-
-    const setDocRef = doc(collection(userDocRef, "flashcardSets"), name);
-    flashcards.forEach((flashcard, index) => {
-      const flashcardRef = doc(collection(setDocRef, "flashcards"), `${index}`);
-      batch.set(flashcardRef, flashcard);
-    });
-
-    await batch.commit();
-
-    alert("Flashcards saved successfully!");
-    handleClose();
-    setName("");
+    const data = await response.json();
+    console.log("Fetched YouTube Links:", data); // Check the data structure
+    return Array.isArray(data.links) ? data.links : []; // Ensure data.links is an array
   } catch (error) {
-    console.error("Error saving flashcards:", error);
-    alert("An error occurred while saving flashcards. Please try again.");
+    console.error("Error fetching YouTube links:", error);
+    alert("An error occurred while fetching YouTube links. Please try again.");
+    return []; // Return an empty array on error
   }
 };
 
-export default function Generate() {
+
+export default function Home() {
   const [text, setText] = useState("");
   const [flashcards, setFlashcards] = useState([]);
+  const [links, setLinks] = useState([]); // Ensure links is always an array
   const [flipped, setFlipped] = useState({});
   const [name, setName] = useState("");
-  const [open, setOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const router = useRouter();
 
@@ -105,25 +73,21 @@ export default function Generate() {
       alert("Please enter some text to generate flashcards.");
       return;
     }
-
+  
     try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        body: JSON.stringify({ text }),
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate flashcards");
-      }
-
-      const data = await response.json();
-      setFlashcards(data.flashcards);
+      const flashcards = await fetchFlashcards(text);
+      setFlashcards(flashcards);
+  
+      const searchTerm = flashcards.length > 0 ? flashcards[0].front : text;
+      const links = await fetchYouTubeLinks(searchTerm);
+      console.log("Fetched YouTube Links:", links); // Add this line
+      setLinks(links);
     } catch (error) {
-      console.error("Error generating flashcards:", error);
-      alert("An error occurred while generating flashcards. Please try again.");
+      console.error("Error processing request:", error);
+      alert("An error occurred. Please try again.");
     }
   };
+  
 
   const handleCardClick = (id) => {
     setFlipped((prev) => ({
@@ -136,7 +100,8 @@ export default function Generate() {
   const handleCloseDialog = () => setDialogOpen(false);
 
   const handleSaveFlashcards = async () => {
-    await saveFlashcards(name, flashcards, handleCloseDialog, setName);
+    // Implementation for saving flashcards
+    handleCloseDialog();
   };
 
   return (
@@ -144,15 +109,19 @@ export default function Generate() {
       <Box
         sx={{
           my: 4,
-          mt: 4,
-          mb: 6,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
         }}
       >
         <Paper
-          sx={{ width: "100%", maxWidth: "md", p: 2, bgcolor: "transparent" }}
+          sx={{
+            width: "100%",
+            maxWidth: "md",
+            p: 2,
+            bgcolor: "transparent",
+            mb: 2,
+          }}
         >
           <TextField
             id="standard-textarea"
@@ -167,8 +136,6 @@ export default function Generate() {
             sx={{
               mb: 2,
               borderRadius: 2,
-              borderColor: "white",
-              bgcolor: "transparent",
               "& .MuiInputBase-input": {
                 color: "white",
               },
@@ -195,10 +162,11 @@ export default function Generate() {
           />
         </Paper>
         <Button
-          variant="outlined"
+          variant="contained"
           color="primary"
           onClick={handleSubmit}
           fullWidth
+          sx={{ mb: 4 }}
         >
           Generate Flashcards
         </Button>
@@ -217,92 +185,70 @@ export default function Generate() {
                     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
                     bgcolor: "#060a1a",
                     color: "white",
+                    height: "200px",
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    perspective: "1000px",
                   }}
                 >
                   <CardActionArea onClick={() => handleCardClick(index)}>
-                    <CardContent>
+                    <CardContent
+                      sx={{
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        position: "relative",
+                        transformStyle: "preserve-3d",
+                        transition: "transform 0.6s",
+                        transform: flipped[index] ? "rotateY(180deg)" : "rotateY(0deg)",
+                      }}
+                    >
                       <Box
                         sx={{
-                          perspective: "1000px",
-                          position: "relative",
+                          position: "absolute",
                           width: "100%",
-                          height: "200px",
-                          boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
+                          height: "100%",
+                          backfaceVisibility: "hidden",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          padding: 2,
+                          boxSizing: "border-box",
+                          textAlign: "center",
+                          wordWrap: "break-word",
+                          bgcolor: "#060a1a",
+                          border: "1px solid #014258",
                         }}
                       >
-                        <Box
-                          sx={{
-                            transformStyle: "preserve-3d",
-                            transition: "transform 0.6s",
-                            transform: flipped[index]
-                              ? "rotateY(180deg)"
-                              : "rotateY(0deg)",
-                            position: "absolute",
-                            width: "100%",
-                            height: "100%",
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              position: "absolute",
-                              width: "100%",
-                              height: "100%",
-                              backfaceVisibility: "hidden",
-                              display: "flex",
-                              justifyContent: "center",
-                              alignItems: "center",
-                              padding: 2,
-                              boxSizing: "border-box",
-                              border: "1px solid #014258", // Light blue border
-                              textOverflow: "ellipsis",
-                              whiteSpace: "normal",
-                              overflowY: "auto",
-                              textAlign: "center",
-                              wordWrap: "break-word",
-                            }}
-                          >
-                            <Typography
-                              variant="h6"
-                              align="center"
-                              sx={{
-                                overflow: "auto",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "normal",
-                              }}
-                            >
-                              {flashcard.front}
-                            </Typography>
-                          </Box>
-                          <Box
-                            sx={{
-                              position: "absolute",
-                              width: "100%",
-                              height: "100%",
-                              backfaceVisibility: "hidden",
-                              display: "flex",
-                              justifyContent: "center",
-                              alignItems: "center",
-                              padding: 2,
-                              boxSizing: "border-box",
-                              border: "1px solid #014258", // Light blue border
-                              transform: "rotateY(180deg)",
-                              whiteSpace: "normal",
-                              overflowY: "auto",
-                              textAlign: "center",
-                              wordWrap: "break-word",
-                            }}
-                          >
-                            <Typography
-                              variant="h6"
-                              align="center"
-                              sx={{
-                                lineHeight: 2,
-                              }}
-                            >
-                              {flashcard.back}
-                            </Typography>
-                          </Box>
-                        </Box>
+                        <Typography variant="h6" align="center">
+                          {flashcard.front}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          width: "100%",
+                          height: "100%",
+                          backfaceVisibility: "hidden",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          padding: 2,
+                          boxSizing: "border-box",
+                          textAlign: "center",
+                          wordWrap: "break-word",
+                          bgcolor: "#014258",
+                          color: "white",
+                          border: "1px solid #014258",
+                          transform: "rotateY(180deg)",
+                        }}
+                      >
+                        <Typography variant="h6" align="center">
+                          {flashcard.back}
+                        </Typography>
                       </Box>
                     </CardContent>
                   </CardActionArea>
@@ -315,7 +261,6 @@ export default function Generate() {
               variant="outlined"
               color="primary"
               onClick={handleOpenDialog}
-              fullWidth
               sx={{ mt: 2, mb: 4 }}
             >
               Save Flashcards
@@ -324,11 +269,45 @@ export default function Generate() {
         </Box>
       )}
 
+{links.length > 0 && (
+  <Box sx={{ mt: 4 }}>
+    <Typography variant="h5" component="h2" gutterBottom>
+      Related YouTube Videos
+    </Typography>
+    <Grid container spacing={2}>
+      {links.map((link, index) => (
+        <Grid item xs={12} sm={6} md={4} key={index}>
+          <Card
+            sx={{
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+              bgcolor: "#060a1a",
+              color: "white",
+              height: "150px",
+            }}
+          >
+            <CardActionArea component="a" href={link} target="_blank">
+              <CardContent sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <Typography variant="h6" component="div" sx={{ mb: 1 }}>
+                  YouTube Video {index + 1}
+                </Typography>
+                <Link href={link} target="_blank" sx={{ color: "primary.main" }}>
+                  Watch Video
+                </Link>
+              </CardContent>
+            </CardActionArea>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+  </Box>
+)}
+
+
       <Dialog open={dialogOpen} onClose={handleCloseDialog}>
         <DialogTitle>Save Flashcards</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Please enter a name for your flashcard set.
+            Please enter a name to save your flashcards.
           </DialogContentText>
           <TextField
             autoFocus
@@ -337,7 +316,7 @@ export default function Generate() {
             label="Flashcard Set Name"
             type="text"
             fullWidth
-            variant="standard"
+            variant="outlined"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
